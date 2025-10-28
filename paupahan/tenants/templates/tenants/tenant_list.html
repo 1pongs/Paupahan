@@ -1,0 +1,48 @@
+{% extends 'tenants/base.html' %}
+{% load formatters %}
+{% block title %}Tenants — Paupahan{% endblock %}
+
+{% block content %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Tenants</h1>
+    <div>
+      <a class="btn btn-success me-2" href="{% url 'tenants:tenant_add' %}">Create Tenant</a>
+      <a class="btn btn-outline-secondary" href="{% url 'tenants:charge_add' %}">Add Charge</a>
+    </div>
+  </div>
+
+  {% if tenants %}
+    <div class="table-responsive shadow-sm bg-white rounded">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Started</th>
+            <th>Monthly Rent</th>
+            <th class="text-end">Balance</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tenants %}
+            <tr>
+              <td class="fw-semibold">{{ t.name }}</td>
+              <td class="text-muted small">{{ t.date_started }}</td>
+              <td>₱{{ t.monthly_rent|format_amount }}</td>
+              <td class="text-end">₱{{ t.balance|format_amount }}</td>
+              <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'tenants:tenant_detail' t.pk %}">View</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card shadow-sm">
+      <div class="card-body text-center">
+        <p class="mb-0">No tenants yet. Create one to get started.</p>
+        <a class="btn btn-primary mt-3" href="{% url 'tenants:tenant_add' %}">Create Tenant</a>
+      </div>
+    </div>
+  {% endif %}
+
+{% endblock %}

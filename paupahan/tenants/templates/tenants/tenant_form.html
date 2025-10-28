@@ -1,0 +1,33 @@
+{% extends 'tenants/base.html' %}
+{% block title %}{% if tenant %}Edit Tenant{% else %}Add Tenant{% endif %} — Paupahan{% endblock %}
+
+{% block content %}
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title">{% if tenant %}Edit Tenant{% else %}Add Tenant{% endif %}</h5>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% for field in form %}
+          {% if field.field.widget.input_type == 'checkbox' %}
+            <div class="form-check mb-3">
+              {{ field }}
+              <label class="form-check-label ms-2">{{ field.label }}</label>
+              {% for err in field.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+            </div>
+          {% else %}
+            <div class="mb-3">
+              <label class="form-label">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+              {% for err in field.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+            </div>
+          {% endif %}
+        {% endfor %}
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" type="submit">Save</button>
+          <a class="btn btn-outline-secondary" href="{% url 'tenants:list' %}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
