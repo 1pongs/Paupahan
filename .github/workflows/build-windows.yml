@@ -38,6 +38,39 @@ jobs:
         run: >
           python -m PyInstaller --onefile --add-data "paupahan;paupahan" --add-data "paupahan\\static;paupahan\\static" --add-data "paupahan\\tenants\\templates;paupahan\\tenants\\templates" --name PaupahanApp run_app.py
 
+      - name: Smoke-test built EXE on Windows runner
+        shell: pwsh
+        run: |
+          Write-Host "Smoke test: start EXE and probe http://127.0.0.1:8000/"
+          $exe = Join-Path $PWD 'dist\PaupahanApp.exe'
+          if (-Not (Test-Path $exe)) { Write-Error "EXE not found: $exe"; exit 1 }
+
+          $proc = Start-Process -FilePath $exe -ArgumentList '' -PassThru
+
+          # wait for server to start (poll up to 15s)
+          $max = 15; $i = 0; $ok = $false
+          while ($i -lt $max) {
+            try {
+              $resp = Invoke-WebRequest -Uri 'http://127.0.0.1:8000/' -UseBasicParsing -TimeoutSec 5
+              if ($resp.StatusCode -eq 200) { $ok = $true; break }
+            } catch {
+              # ignore and retry
+            }
+            Start-Sleep -Seconds 1
+            $i++
+          }
+
+          if (-not $ok) {
+            Write-Host "Smoke test failed: unable to fetch http://127.0.0.1:8000/"
+            $tempLog = Join-Path $env:TEMP 'paupahan_run.log'
+            if (Test-Path $tempLog) { Write-Host "---- last lines of $tempLog ----"; Get-Content $tempLog -Tail 200 }
+            try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
+            exit 1
+          } else {
+            Write-Host "Smoke test passed: HTTP 200 received"
+            try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
+          }
+
       - name: Upload EXE as workflow artifact
         uses: actions/upload-artifact@v4
         with:

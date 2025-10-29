@@ -73,6 +73,19 @@ def main():
         # If logging setup fails, continue without file logging
         pass
 
+    # Ensure database migrations are applied so the bundled app has the
+    # required tables (the release build doesn't include a pre-built
+    # db.sqlite3). Running migrations here creates the sqlite DB if it
+    # doesn't exist.
+    try:
+        from django.core.management import call_command
+
+        logging.info("Applying database migrations...")
+        call_command("migrate", "--noinput")
+        logging.info("Migrations applied")
+    except Exception:
+        logging.exception("Failed to apply migrations")
+
     # Start Django in a background thread so we can open the browser from
     # the main thread. Because we disabled the autoreloader above, the
     # server will run in this thread until stopped.
