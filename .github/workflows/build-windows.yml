@@ -29,14 +29,9 @@ jobs:
           pip install pyinstaller
 
       - name: Build Windows EXE with PyInstaller
-        run: |
-          py -3 -m PyInstaller --onefile \
-            --add-data "db.sqlite3;." \
-            --add-data "paupahan;./paupahan" \
-            --add-data "paupahan\static;./paupahan/static" \
-            --add-data "paupahan\tenants\templates;./paupahan/tenants/templates" \
-            --name PaupahanApp \
-            run_app.py
+        shell: pwsh
+        run: >
+          py -3 -m PyInstaller --onefile --add-data "db.sqlite3;." --add-data "paupahan;paupahan" --add-data "paupahan\\static;paupahan\\static" --add-data "paupahan\\tenants\\templates;paupahan\\tenants\\templates" --name PaupahanApp run_app.py
 
       - name: Upload EXE as workflow artifact
         uses: actions/upload-artifact@v4
