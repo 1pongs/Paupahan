@@ -10,6 +10,9 @@ import os
 import sys
 import threading
 import webbrowser
+import logging
+import time
+import tempfile
 
 
 # If frozen by PyInstaller, resources are extracted to _MEIPASS
@@ -29,11 +32,20 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "paupahan.settings")
 
 
 def start_django():
-    # Run Django's runserver management command
-    from django.core.management import execute_from_command_line
+    # Start Django's development server in-process. When packaged by
+    # PyInstaller the normal autoreloader used by runserver can fork and
+    # confuse the bundled binary; calling the command with
+    # use_reloader=False avoids that and keeps the server running in
+    # this thread.
+    try:
+        from django.core.management import call_command
 
-    # Use 127.0.0.1 to avoid exposing to external interfaces by default
-    execute_from_command_line(["manage.py", "runserver", "127.0.0.1:8000"])
+        logging.info("Starting Django runserver on 127.0.0.1:8000")
+        # Call runserver without the autoreloader so it stays in this process
+        call_command("runserver", "127.0.0.1:8000", use_reloader=False)
+    except Exception:
+        logging.exception("Failed to start Django runserver")
+        raise
 
 
 def main():
@@ -42,21 +54,44 @@ def main():
 
     django.setup()
 
-    # Start Django in a background thread so we can open the browser from main thread
+    # Configure a simple file logger so we can inspect errors when running
+    # the bundled EXE (double-clicks don't show a console). Place the log
+    # in the temp dir when frozen, otherwise next to the project.
+    try:
+        if getattr(sys, "frozen", False):
+            log_dir = tempfile.gettempdir()
+        else:
+            log_dir = base_dir
+        log_file = os.path.join(log_dir, "paupahan_run.log")
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s %(message)s",
+            handlers=[logging.FileHandler(log_file, encoding="utf-8"), logging.StreamHandler()],
+        )
+        logging.info("run_app started; logging to %s", log_file)
+    except Exception:
+        # If logging setup fails, continue without file logging
+        pass
+
+    # Start Django in a background thread so we can open the browser from
+    # the main thread. Because we disabled the autoreloader above, the
+    # server will run in this thread until stopped.
     t = threading.Thread(target=start_django, daemon=True)
     t.start()
 
-    # Open the default browser to the local site
+    # Give the server a short moment to start then open the browser
     try:
+        # small wait to let the server bind
+        time.sleep(1.0)
         webbrowser.open("http://127.0.0.1:8000")
     except Exception:
-        pass
+        logging.exception("Failed to open web browser")
 
     # Keep the main thread alive while the server thread runs
     try:
         t.join()
     except KeyboardInterrupt:
-        pass
+        logging.info("Interrupted by user, exiting")
 
 
 if __name__ == "__main__":
